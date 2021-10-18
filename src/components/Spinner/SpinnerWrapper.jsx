@@ -1,50 +1,36 @@
 import React from "react";
 import { useEffect, useState } from "react";
 import { gsap } from "gsap";
-import { getRandomInt } from "../../utls";
+import { calculateSpinnerDistance, getRandomInt } from "../../utls";
 import { Spinner } from "./Spinner";
 import { SpinnerBtn } from "./SpinnerBtn";
-import { getAllPeople } from "../../api/People";
 
 export const SpinnerWrapper = () => {
   const [staticNameArray, setStaticNameArray] = useState([]);
   const [nameArray, setNameArray] = useState([]);
+  const [whoHasGoneArray, setWhoHasGoneArray] = useState([]);
 
-  const [rotations, setRotations] = useState(2);
-  const [speed, setSpeed] = useState(0);
-  const [currentName, setCurrentName] = useState();
-  const [gameOver, setGameOver] = useState(false);
+  // Game Variables
   let moveDistance;
+  const [rotations, setRotations] = useState(10);
+  const [duration, setDuration] = useState(0.5);
+  const [currentName, setCurrentName] = useState();
+  const [gameActive, setGameActive] = useState(false);
+  const [gameOver, setGameOver] = useState(false);
+  const [isSpinning, setIsSpinning] = useState(false);
 
   // Game Logic
   const pickRandomName = () => {
     let randomInt = getRandomInt(nameArray.length);
     let selectedName = nameArray[randomInt];
+    setWhoHasGoneArray([...whoHasGoneArray, selectedName]);
     setNameArray(nameArray.filter((name) => name !== selectedName));
-    // Static Array Operations
-    let currentNamePosition = staticNameArray.indexOf(currentName);
-    let selectedNamePosition = staticNameArray.indexOf(selectedName);
-    console.log("current", currentName, "selected", selectedName);
-    console.log("current Names position in array", currentNamePosition);
-    console.log("selected Names position in array", selectedNamePosition);
-    let distanceToTravel = currentNamePosition - selectedNamePosition;
-
-    if (distanceToTravel === 0) {
-      moveDistance = staticNameArray.length * 50 * rotations;
-    }
-
-    if (distanceToTravel < 0) {
-      moveDistance = Math.abs(
-        (distanceToTravel + staticNameArray.length) * 50 +
-          staticNameArray.length * 50 * rotations
-      );
-    }
-    if (distanceToTravel > 0) {
-      moveDistance = Math.abs(
-        distanceToTravel * 50 + staticNameArray.length * 50 * rotations
-      );
-    }
-
+    moveDistance = calculateSpinnerDistance(
+      currentName,
+      selectedName,
+      rotations,
+      staticNameArray
+    );
     setCurrentName(selectedName);
   };
 
@@ -58,13 +44,18 @@ export const SpinnerWrapper = () => {
   const nextButtonClick = () => {
     if (!gameOver && !gsap.isTweening(".box")) {
       checkIfCompleted();
+      setGameActive(true);
       pickRandomName();
-      gsap.to(".box", speed, {
+      setIsSpinning(true);
+      const tl = gsap.timeline();
+      tl.to(".box", duration, {
         ease: "power4.inOut",
         y: `+=${moveDistance}`,
         modifiers: {
           y: (y) => (parseFloat(y) % (staticNameArray.length * 50)) + "px",
         },
+      }).call(() => {
+        setIsSpinning(false);
       });
     }
   };
@@ -93,23 +84,56 @@ export const SpinnerWrapper = () => {
     });
   }, [staticNameArray]);
 
+  const spinnerDimensions = {
+    height: "500px",
+    border: "12px solid teal",
+    overflow: "hidden,",
+    // width: "200px",
+  };
+
   return (
     <>
-      <div className="spin__page__wrapper flex md:flex-row flex-col ">
-        <div className="flex-1 border-4 border-purple-500 w-full h-full flex flex-col items-center justify-center ">
+      <div className=" md:flex-row flex-col flex ">
+        <div
+          className="flex-1 border-4 border-purple-500 w-full h-full flex flex-col items-center justify-center overflow-hidden relative"
+          style={spinnerDimensions}
+        >
           <SpinnerBtn nextButtonClick={nextButtonClick} />
-          <Spinner staticNameArray={staticNameArray} />
+          <Spinner
+            staticNameArray={staticNameArray}
+            currentName={currentName}
+          />
         </div>
 
         <div className="text-5xl flex-1 text-white font-extrabold text-center border-red-200 border-2">
-          {currentName}
-        </div>
-        <div className="text-lg text-white font-bold">Remaining</div>
-        {nameArray.map((name) => (
-          <div className="text-sm text-white font-base" key={name}>
-            {name}
+          <div className="current__name__wrapper h-24 border-2 border-white flex items-center justify-center">
+            {!isSpinning && gameActive && (
+              <div className="current__name">{currentName}</div>
+            )}
           </div>
-        ))}
+          <div className="text-lg text-white">
+            is game active:{" "}
+            <span className="text-yellow-400">
+              {gameActive ? "True" : "False"}
+            </span>
+          </div>
+          <div className="text-lg text-white">
+            is spinning:{" "}
+            <span className="text-yellow-400">
+              {isSpinning ? "True" : "False"}
+            </span>
+          </div>
+          <div className="text-lg text-white">
+            remaining people:{" "}
+            <span className="text-yellow-400">{nameArray.length}</span>
+          </div>
+          <div className="text-lg text-white font-black mt-5">Who Has Gone</div>
+          {whoHasGoneArray.map((name) => (
+            <div className="text-sm text-yellow-400" key={name}>
+              {name}
+            </div>
+          ))}
+        </div>
       </div>
     </>
   );
