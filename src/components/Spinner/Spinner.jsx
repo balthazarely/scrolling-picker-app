@@ -4,14 +4,14 @@ import { SpinnerBox } from "./SpinnerBox";
 const spinnerDimensions = {
   width: "250px",
   height: "450px",
-  border: "1px solid teal",
+  marginTop: " -100px",
 };
 
 export const Spinner = ({ staticNameArray, currentName }) => {
   return (
     <div style={spinnerDimensions}>
       {staticNameArray.map((name, i) => (
-        <SpinnerBox key={name} name={name} currentName={currentName} />
+        <SpinnerBox key={i} name={name} currentName={currentName} />
       ))}
     </div>
   );
